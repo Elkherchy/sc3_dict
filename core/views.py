@@ -355,10 +355,32 @@ class FileUploadView(APIView):
         file_serializer = UploadedDocumentSerializer(data=request.data)
         if file_serializer.is_valid():
             file_serializer.save(uploaded_by=user)  # ✅ Save with user ID instead of token
+            points_entry, created = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
+            points_entry.points = F('points') + 5
+            points_entry.save()
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+
+
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
+    def change_status(self, request, pk=None):
+        """Allow anyone to approve or reject words."""
+        file = self.get_object()
+        new_status = request.data.get('status')
 
+        if new_status not in ['review', 'approved']:
+            return Response({'error': 'Invalid status'}, status=400)
+
+        # Approve the word
+        file.status = new_status
+        file.save()
+
+        # Award points only if the creator is authenticated
+        if file.user_id:
+            points_entry, _ = PointsSystem.objects.get_or_create(user=file.user_id, defaults={"points": 0})
+            points_entry.points = F('points') + 10
+            points_entry.save()
     def get(self, request, *args, **kwargs):
         """Get all uploaded PDFs."""
         documents = UploadedDocument.objects.all()
