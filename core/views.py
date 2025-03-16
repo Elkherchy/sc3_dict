@@ -23,6 +23,8 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType  # ✅ Import this!
+from django.db.models.functions import Coalesce
+from django.db.models import Sum , F, Value
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
