@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions
 from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem,ModeratorComment
@@ -25,6 +25,13 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType  # ✅ Import this!
 from django.db.models.functions import Coalesce
 from django.db.models import Sum , F, Value
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from .models import UploadedDocument
+from .serializers import UploadedDocumentSerializer
+from django.shortcuts import get_object_or_404
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -331,3 +338,17 @@ def leaderboard(request):
         })
 
     return Response(leaderboard_data)
+class FileUploadView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [permissions.AllowAny]  # Anyone can upload
+
+    def post(self, request, *args, **kwargs):
+        file_serializer = UploadedDocumentSerializer(data=request.data)
+        if file_serializer.is_valid():
+            file_serializer.save(uploaded_by=request.user)
+            return Response(file_serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+def view_pdf(request, file_id):
+    document = get_object_or_404(UploadedDocument, id=file_id)
+    return FileResponse(document.file.open(), content_type='application/pdf')

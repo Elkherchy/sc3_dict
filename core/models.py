@@ -86,3 +86,17 @@ class ModeratorComment(models.Model):
 
     def __str__(self):
         return f"Comment by {self.moderator.username} on {self.word.text}"
+    
+class UploadedDocument(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('review', 'In Review'),
+        ('approved', 'Approved')
+    ]
+    file = models.FileField(upload_to='uploads/')
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def _str_(self):
+        return f"{self.file.name} - {self.status}"
