@@ -3,7 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions
 from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem,ModeratorComment
 from .serializers import UserSerializer, WordSerializer,ModeratorCommentSerializer, ApprovalWorkflowSerializer, ContributionSerializer, PointsSystemSerializer
-from .utils import search_word_in_pdfs, generate_definition
+from .utils import generate_variants, search_word_in_pdfs, generate_definition
 import json
 from core.models import WordHistory  # Assure-toi que le modèle est bien importé
 from django.db.models import F
@@ -137,6 +137,8 @@ class RegisterUserView(APIView):
             return Response({
                 "error": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
+GROQ_API_KEY = "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"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 class WordViewSet(viewsets.ModelViewSet):
     queryset = Word.objects.all()
     serializer_class = WordSerializer
@@ -144,15 +146,32 @@ class WordViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         created_by_id = self.request.data.get('created_by')
-
+        
         if created_by_id:
-            user = User.objects.get(id=created_by_id)
-            serializer.save(created_by=user)
-            instance = serializer.save()
-            Contribution.objects.create(user=user, word=instance, action='add')
-            PointsSystem.objects.filter(user=user).update(points=F('points') + 5)
+            # If created_by_id is provided in the request data
+            try:
+                user = User.objects.get(id=created_by_id)
+                instance = serializer.save(created_by=user)
+                Contribution.objects.create(user=user, word=instance, action='add')
+                PointsSystem.objects.filter(user=user).update(points=F('points') + 5)
+            except User.DoesNotExist:
+                # Handle case where user doesn't exist
+                instance = serializer.save(created_by=None)
+        elif self.request.user.is_authenticated:
+            # If user is authenticated but no created_by_id provided
+            instance = serializer.save(created_by=self.request.user)
+            Contribution.objects.create(user=self.request.user, word=instance, action='add')
+            PointsSystem.objects.filter(user=self.request.user).update(points=F('points') + 5)
         else:
-            instance = serializer.save()
+            # Anonymous user - don't set created_by
+            instance = serializer.save(created_by=None)
+        
+        # Generate AI variants after saving
+        ai_variants = generate_variants(instance.text)
+        instance.variants = ai_variants
+        instance.save()
+        
+        return instance
     
     @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
     def change_status(self, request, pk=None):
@@ -174,7 +193,13 @@ class WordViewSet(viewsets.ModelViewSet):
             PointsSystem.objects.filter(user=word.created_by).update(points=F('points') + 10)
 
         return Response({'message': f'Word status updated to {new_status}'})
-
+    @action(detail=True, methods=['post'])
+    def regenerate_variants(self, request, pk=None):
+        """Re-generates AI variants for the word in the text field."""
+        word = self.get_object()
+        word.variants = generate_variants(word.text)  # ✅ Use text field for AI generation
+        word.save()
+        return Response({"message": "Variants regenerated", "variants": word.variants})
     @action(detail=True, methods=['get'], permission_classes=[AllowAny])  # Remplacé IsAuthenticated
     def history(self, request, pk=None):
         """Récupère l'historique des changements de statut d'un mot."""

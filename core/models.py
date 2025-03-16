@@ -30,7 +30,7 @@ class Word(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     examples = models.TextField(blank=True, null=True) 
     likes = models.IntegerField(default=0)
-   
+    variants = models.JSONField(blank=True, null=True)
     def __str__(self):
         return self.text
 

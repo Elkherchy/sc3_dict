@@ -82,3 +82,53 @@ def generate_definition(word):
     if response.status_code == 200:
         return response.json()["choices"][0]["message"]["content"].strip()
     return "Définition indisponible."
+
+
+def generate_variants(word):
+    """Uses Groq AI to generate variants (conjugations, grammatical forms) for the given word."""
+    if not GROQ_API_KEY:
+        return ["L'IA n'est pas disponible (clé API manquante)."]
+
+    payload = {
+        "model": "llama3-70b-8192",
+        "temperature": 0.2,
+        "messages": [
+            {"role": "system", "content": """
+            Vous êtes un expert en linguistique Hassaniya.
+            Votre tâche est de générer 3 a 4  variantes d'un mot donné.
+            Incluez la conjugaison, les formes grammaticales et les dérivations.
+            Répondez sous forme de liste JSON.
+            """},
+            {"role": "user", "content": f"Génère des variantes pour le mot: {word}"}
+        ]
+    }
+
+    headers = {"Authorization": f"Bearer {GROQ_API_KEY}"}
+    
+    try:
+        response = requests.post(GROQ_URL, json=payload, headers=headers)
+        
+        if response.status_code == 200:
+            ai_response = response.json()["choices"][0]["message"]["content"]
+            
+            # Handle possible JSON within markdown code blocks
+            if "```json" in ai_response:
+                # Extract JSON from markdown code block
+                start_idx = ai_response.find("```json") + 7
+                end_idx = ai_response.find("```", start_idx)
+                json_content = ai_response[start_idx:end_idx].strip()
+                return json.loads(json_content)
+            
+            # Try direct JSON parsing
+            try:
+                return json.loads(ai_response)
+            except json.JSONDecodeError:
+                # If it's not valid JSON, return as a single item list
+                return [ai_response]
+                
+        # Handle API error
+        return [f"Erreur API: {response.status_code}"]
+        
+    except Exception as e:
+        # Safely handle any errors
+        return [f"Erreur lors de la génération des variantes: {str(e)}"]
