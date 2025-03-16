@@ -8,7 +8,6 @@ router.register(r'approval', ApprovalWorkflowViewSet)
 router.register(r'contributions', ContributionViewSet)
 router.register(r'points', PointsSystemViewSet)
 router.register(r'moderators', ModeratorCommentViewSet)
-router.register(r'upload', FileUploadView)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -16,5 +15,6 @@ urlpatterns = [
     path('api/auth/register/', RegisterUserView.as_view(), name='register_users'),
     path('chatbot/', chatbot_query, name='chatbot'),
     path('leaderboard/', leaderboard, name='leaderboard'),
+    path('upload/', FileUploadView.as_view(), name='file-upload'),
     path('view-pdf/<int:file_id>/', view_pdf, name='view-pdf'),
 ]
