@@ -349,6 +349,11 @@ class FileUploadView(APIView):
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get(self, request, *args, **kwargs):
+        """Get all uploaded PDFs."""
+        documents = UploadedDocument.objects.all()
+        serializer = UploadedDocumentSerializer(documents, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 def view_pdf(request, file_id):
     document = get_object_or_404(UploadedDocument, id=file_id)
     return FileResponse(document.file.open(), content_type='application/pdf')
