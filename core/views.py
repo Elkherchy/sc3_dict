@@ -5,6 +5,8 @@ from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem,Mod
 from .serializers import UserSerializer, WordSerializer,ModeratorCommentSerializer, ApprovalWorkflowSerializer, ContributionSerializer, PointsSystemSerializer
 from .utils import generate_variants, search_word_in_pdfs, generate_definition
 import json
+from rest_framework.viewsets import ModelViewSet
+
 from core.models import WordHistory  # Assure-toi que le modèle est bien importé
 from django.db.models import F
 from rest_framework.decorators import action
@@ -340,52 +342,50 @@ def leaderboard(request):
     return Response(leaderboard_data)
 
 
-class FileUploadView(APIView):
+class FileUploadViewSet(ModelViewSet):  # ✅ Changement de APIView à ModelViewSet
+    queryset = UploadedDocument.objects.all()
+    serializer_class = UploadedDocumentSerializer
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [permissions.AllowAny]  # ✅ No authentication required
+    permission_classes = [permissions.AllowAny]
 
-    def post(self, request, *args, **kwargs):
-        user_id = request.data.get("user_id")  # ✅ Get user_id from request
+    def create(self, request, *args, **kwargs):  # ✅ "post" dans APIView devient "create" ici
+        user_id = request.data.get("user_id")
 
         if not user_id:
             return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = get_object_or_404(User, id=user_id)  # ✅ Validate user ID
+        user = get_object_or_404(User, id=user_id)
 
-        file_serializer = UploadedDocumentSerializer(data=request.data)
+        file_serializer = self.get_serializer(data=request.data)
         if file_serializer.is_valid():
-            file_serializer.save(uploaded_by=user)  # ✅ Save with user ID instead of token
+            file_serializer.save(uploaded_by=user)
             points_entry, created = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
             points_entry.points = F('points') + 5
             points_entry.save()
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
 
+        return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        else:
-            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
-    def change_status(self, request, pk=None):
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
+    def change_status(self, request, pk=None):  # ✅ Maintenant c'est un ViewSet
         """Allow anyone to approve or reject words."""
-        file = self.get_object()
+        file = self.get_object()  # ✅ `get_object()` fonctionne dans un ViewSet
         new_status = request.data.get('status')
 
         if new_status not in ['review', 'approved']:
             return Response({'error': 'Invalid status'}, status=400)
 
-        # Approve the word
+        # Update the status
         file.status = new_status
         file.save()
 
         # Award points only if the creator is authenticated
-        if file.user_id:
-            points_entry, _ = PointsSystem.objects.get_or_create(user=file.user_id, defaults={"points": 0})
+        if file.uploaded_by:
+            points_entry, _ = PointsSystem.objects.get_or_create(user=file.uploaded_by, defaults={"points": 0})
             points_entry.points = F('points') + 10
             points_entry.save()
-    def get(self, request, *args, **kwargs):
-        """Get all uploaded PDFs."""
-        documents = UploadedDocument.objects.all()
-        serializer = UploadedDocumentSerializer(documents, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response({'message': 'Status updated successfully'}, status=200)
 def view_pdf(request, file_id):
     document = get_object_or_404(UploadedDocument, id=file_id)
     return FileResponse(document.file.open(), content_type='application/pdf')
