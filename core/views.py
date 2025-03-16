@@ -178,14 +178,12 @@ class WordViewSet(viewsets.ModelViewSet):
         """Allow anyone to approve or reject words."""
         word = self.get_object()
         new_status = request.data.get('status')
-        comment = request.data.get('comment', '')
 
         if new_status not in ['review', 'approved']:
             return Response({'error': 'Invalid status'}, status=400)
 
         # Approve the word
         word.status = new_status
-        word.examples = comment
         word.save()
 
         # Award points only if the creator is authenticated
@@ -241,7 +239,29 @@ class PointsSystemViewSet(viewsets.ModelViewSet):
     queryset = PointsSystem.objects.all()
     serializer_class = PointsSystemSerializer
     permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
+    @action(detail=True, methods=['post'])
+    def add_points(self, request, pk=None):
+        """Add points to a user. If no entry exists, create one."""
+        points_to_add = request.data.get('points', 0)
 
+        # ✅ Validate points input
+        if not isinstance(points_to_add, int) or points_to_add < 0:
+            return Response({"error": "Invalid points amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ✅ Ensure user exists
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        # ✅ Create PointsSystem entry if missing
+        points_entry, created = PointsSystem.objects.get_or_create(user=user)
+
+        # ✅ Update points
+        points_entry.points = F('points') + points_to_add
+        points_entry.save()
+
+        return Response({"message": f"{points_to_add} points added successfully!"})
 @csrf_exempt
 def chatbot_query(request):
     """
