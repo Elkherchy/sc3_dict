@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem
+from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem , ModeratorComment
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,6 +30,10 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
         model = ApprovalWorkflow
         fields = '__all__'
 
+class ModeratorCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ModeratorComment
+        fields = '__all__'
 class ContributionSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField() 
     word = serializers.SerializerMethodField() 

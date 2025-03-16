@@ -27,7 +27,7 @@ class Word(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    moderator_comment = models.TextField(blank=True, null=True)  # Nouveau champ
+    moderator_comment = models.TextField(blank=True, null=True) 
     
     def __str__(self):
         return self.text
@@ -76,3 +76,11 @@ class PointsSystem(models.Model):
     badges = models.TextField(blank=True, null=True)  # JSON field to store badge info
     def __str__(self):
         return f"{self.user.username} - {self.points} points"
+class ModeratorComment(models.Model):
+    word = models.ForeignKey(Word, on_delete=models.CASCADE, related_name='moderator_comments')
+    moderator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='moderator_comments')
+    comment = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment by {self.moderator.username} on {self.word.text}"

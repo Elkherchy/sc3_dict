@@ -1,8 +1,8 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions
-from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem
-from .serializers import UserSerializer, WordSerializer, ApprovalWorkflowSerializer, ContributionSerializer, PointsSystemSerializer
+from .models import User, Word, ApprovalWorkflow, Contribution, PointsSystem,ModeratorComment
+from .serializers import UserSerializer, WordSerializer,ModeratorCommentSerializer, ApprovalWorkflowSerializer, ContributionSerializer, PointsSystemSerializer
 from .utils import search_word_in_pdfs, generate_definition
 import json
 from core.models import WordHistory  # Assure-toi que le modèle est bien importé
@@ -30,6 +30,11 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+
+class ModeratorCommentViewSet(viewsets.ModelViewSet):
+    queryset = ModeratorComment.objects.all()
+    serializer_class = ModeratorCommentSerializer
+    permission_classes = [AllowAny]   
     
 class IsModeratorOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
