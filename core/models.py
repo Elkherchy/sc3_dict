@@ -25,11 +25,12 @@ class Word(models.Model):
     text = models.CharField(max_length=100, unique=True)
     definition = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    types = models.CharField(max_length=20,  default='Noun')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     examples = models.TextField(blank=True, null=True) 
-    likes = models.IntegerField(default=0)  
-
+    likes = models.IntegerField(default=0)
+   
     def __str__(self):
         return self.text
 
