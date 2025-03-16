@@ -31,9 +31,15 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ModeratorCommentSerializer(serializers.ModelSerializer):
+    moderator = serializers.SerializerMethodField() 
+    word = serializers.SerializerMethodField() 
     class Meta:
         model = ModeratorComment
-        fields = '__all__'
+        fields = ['id', 'comment', 'created_at', 'word', 'moderator']
+    def get_user(self, obj):
+        return obj.user.username if obj.moderator else None  
+    def get_word(self, obj):
+        return obj.word.text if obj.word else None 
 class ContributionSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField() 
     word = serializers.SerializerMethodField() 
