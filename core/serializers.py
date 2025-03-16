@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
 class WordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Word
-        fields = ['id', 'text', 'definition', 'status', 'created_at', 'moderator_comment']
+        fields = ['id', 'text', 'definition', 'status', 'created_at', 'moderator_comment','created_by']
         read_only_fields = ['status', 'created_at', 'created_by']  # Ensure `created_by` is not required in input
 
     def create(self, validated_data):
@@ -31,10 +31,16 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ContributionSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField() 
+    word = serializers.SerializerMethodField() 
     class Meta:
         model = Contribution
-        fields = '__all__'
+        fields = ['id', 'action', 'timestamp', 'user', 'word']
 
+    def get_user(self, obj):
+        return obj.user.username if obj.user else None  
+    def get_word(self, obj):
+        return obj.word.text if obj.word else None  
 class PointsSystemSerializer(serializers.ModelSerializer):
     class Meta:
         model = PointsSystem

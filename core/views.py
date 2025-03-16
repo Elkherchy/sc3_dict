@@ -125,17 +125,18 @@ class RegisterUserView(APIView):
 class WordViewSet(viewsets.ModelViewSet):
     queryset = Word.objects.all()
     serializer_class = WordSerializer
-    permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
+    permission_classes = [AllowAny]  
 
     def perform_create(self, serializer):
-        # Si l'utilisateur est authentifié, on l'associe au mot
-        if self.request.user.is_authenticated:
-            serializer.save(created_by=self.request.user)
+        created_by_id = self.request.data.get('created_by')
+
+        if created_by_id:
+            user = User.objects.get(id=created_by_id)
+            serializer.save(created_by=user)
             instance = serializer.save()
-            Contribution.objects.create(user=self.request.user, word=instance, contribution_type='add')
-            PointsSystem.objects.filter(user=self.request.user).update(points=F('points') + 5)
+            Contribution.objects.create(user=user, word=instance)
+            PointsSystem.objects.filter(user=user).update(points=F('points') + 5)
         else:
-            # Sinon, on sauvegarde simplement le mot sans créateur
             instance = serializer.save()
     
     @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
@@ -154,7 +155,7 @@ class WordViewSet(viewsets.ModelViewSet):
         word.save()
 
         # Award points only if the creator is authenticated
-        if word.created_by and hasattr(word.created_by, 'is_authenticated') and word.created_by.is_authenticated:
+        if word.created_by:
             PointsSystem.objects.filter(user=word.created_by).update(points=F('points') + 10)
 
         return Response({'message': f'Word status updated to {new_status}'})
