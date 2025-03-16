@@ -34,7 +34,15 @@ class UserViewSet(viewsets.ModelViewSet):
 class ModeratorCommentViewSet(viewsets.ModelViewSet):
     queryset = ModeratorComment.objects.all()
     serializer_class = ModeratorCommentSerializer
-    permission_classes = [AllowAny]   
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        """Permet de filtrer les commentaires par mot s'il y a un paramètre 'word_id' dans la requête."""
+        queryset = super().get_queryset()
+        word_id = self.request.query_params.get('word_id')
+        if word_id:
+            queryset = queryset.filter(word_id=word_id)
+        return queryset 
     
 class IsModeratorOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):

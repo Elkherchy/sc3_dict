@@ -32,10 +32,13 @@ class ApprovalWorkflowSerializer(serializers.ModelSerializer):
 class ModeratorCommentSerializer(serializers.ModelSerializer):
     moderator = serializers.CharField(source='moderator.username', read_only=True)  # Récupère username du modérateur
     word = serializers.CharField(source='word.text', read_only=True)  # Récupère le texte du mot
+    moderator_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='moderator', write_only=True)
+    word_id = serializers.PrimaryKeyRelatedField(queryset=Word.objects.all(), source='word', write_only=True)
 
     class Meta:
         model = ModeratorComment
-        fields = ['id', 'comment', 'created_at', 'word', 'moderator']
+        fields = ['id', 'comment', 'created_at', 'word', 'moderator', 'moderator_id', 'word_id']  # Ajout de moderator_id et word_id
+
 class ContributionSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField() 
     word = serializers.SerializerMethodField() 
