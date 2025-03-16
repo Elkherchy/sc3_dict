@@ -158,7 +158,7 @@ class WordViewSet(viewsets.ModelViewSet):
 
         # Approve the word
         word.status = new_status
-        word.moderator_comment = comment
+        word.examples = comment
         word.save()
 
         # Award points only if the creator is authenticated

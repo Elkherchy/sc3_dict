@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
 class WordSerializer(serializers.ModelSerializer):
     class Meta:
         model = Word
-        fields = ['id', 'text', 'definition', 'status', 'created_at', 'moderator_comment','created_by']
+        fields = ['id', 'text', 'definition', 'status', 'created_at', 'examples','created_by']
         read_only_fields = ['status', 'created_at', 'created_by']  # Ensure `created_by` is not required in input
 
     def create(self, validated_data):

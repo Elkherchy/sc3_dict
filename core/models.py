@@ -27,7 +27,7 @@ class Word(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    moderator_comment = models.TextField(blank=True, null=True) 
+    examples = models.TextField(blank=True, null=True) 
     
     def __str__(self):
         return self.text
