@@ -108,7 +108,7 @@ DATABASES = {
         'NAME': 'hassaniya_dict',
         'USER': 'elkherchybaba',
         'PASSWORD': 'kh@38405659',
-        'HOST': '127.0.0.1',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
