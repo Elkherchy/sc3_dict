@@ -11,7 +11,7 @@ class User(AbstractUser):
     email = models.CharField(max_length=20)
     groups = models.ManyToManyField(Group, related_name="core_user_groups", blank=True)
     user_permissions = models.ManyToManyField(Permission, related_name="core_user_permissions", blank=True)
-
+    created_at = models.DateTimeField(auto_now_add=True)
     class Meta:
         permissions = [
             ("can_manage_users", "Can manage users"),
