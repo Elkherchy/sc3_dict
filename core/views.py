@@ -153,7 +153,9 @@ class WordViewSet(viewsets.ModelViewSet):
                 user = User.objects.get(id=created_by_id)
                 instance = serializer.save(created_by=user)
                 Contribution.objects.create(user=user, word=instance, action='add')
-                PointsSystem.objects.filter(user=user).update(points=F('points') + 5)
+                points_obj, _ = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
+                points_obj.points = F('points') + 5
+                points_obj.save()
             except User.DoesNotExist:
                 # Handle case where user doesn't exist
                 instance = serializer.save(created_by=None)
@@ -161,7 +163,9 @@ class WordViewSet(viewsets.ModelViewSet):
             # If user is authenticated but no created_by_id provided
             instance = serializer.save(created_by=self.request.user)
             Contribution.objects.create(user=self.request.user, word=instance, action='add')
-            PointsSystem.objects.filter(user=self.request.user).update(points=F('points') + 5)
+            points_obj, _ = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
+            points_obj.points = F('points') + 5
+            points_obj.save()
         else:
             # Anonymous user - don't set created_by
             instance = serializer.save(created_by=None)
