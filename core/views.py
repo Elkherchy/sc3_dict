@@ -340,18 +340,25 @@ def leaderboard(request):
     return Response(leaderboard_data)
 
 
-@permission_classes([AllowAny])
 class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-    permission_classes = [permissions.AllowAny]  # Anyone can upload
+    permission_classes = [permissions.AllowAny]  # ✅ No authentication required
 
     def post(self, request, *args, **kwargs):
+        user_id = request.data.get("user_id")  # ✅ Get user_id from request
+
+        if not user_id:
+            return Response({"error": "User ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(User, id=user_id)  # ✅ Validate user ID
+
         file_serializer = UploadedDocumentSerializer(data=request.data)
         if file_serializer.is_valid():
-            file_serializer.save()
+            file_serializer.save(uploaded_by=user)  # ✅ Save with user ID instead of token
             return Response(file_serializer.data, status=status.HTTP_201_CREATED)
         else:
             return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def get(self, request, *args, **kwargs):
         """Get all uploaded PDFs."""
         documents = UploadedDocument.objects.all()
