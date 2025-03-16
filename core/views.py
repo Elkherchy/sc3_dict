@@ -122,20 +122,25 @@ class RegisterUserView(APIView):
             return Response({
                 "error": str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
-
 class WordViewSet(viewsets.ModelViewSet):
     queryset = Word.objects.all()
     serializer_class = WordSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-        instance = serializer.save()
-        Contribution.objects.create(user=self.request.user, word=instance, contribution_type='add')
-        PointsSystem.objects.filter(user=self.request.user).update(points=F('points') + 5)
-    @action(detail=True, methods=['post'], permission_classes=[IsModeratorOrAdmin])
+        # Si l'utilisateur est authentifié, on l'associe au mot
+        if self.request.user.is_authenticated:
+            serializer.save(created_by=self.request.user)
+            instance = serializer.save()
+            Contribution.objects.create(user=self.request.user, word=instance, contribution_type='add')
+            PointsSystem.objects.filter(user=self.request.user).update(points=F('points') + 5)
+        else:
+            # Sinon, on sauvegarde simplement le mot sans créateur
+            instance = serializer.save()
+    
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
     def change_status(self, request, pk=None):
-        """Allow only moderators or admins to approve or reject words."""
+        """Allow anyone to approve or reject words."""
         word = self.get_object()
         new_status = request.data.get('status')
         comment = request.data.get('comment', '')
@@ -143,17 +148,18 @@ class WordViewSet(viewsets.ModelViewSet):
         if new_status not in ['review', 'approved']:
             return Response({'error': 'Invalid status'}, status=400)
 
-    # Approve the word
+        # Approve the word
         word.status = new_status
         word.moderator_comment = comment
         word.save()
 
-    # Award 10 points to the user who proposed the word
-        PointsSystem.objects.filter(user=word.created_by).update(points=F('points') + 10)
+        # Award points only if the creator is authenticated
+        if word.created_by and hasattr(word.created_by, 'is_authenticated') and word.created_by.is_authenticated:
+            PointsSystem.objects.filter(user=word.created_by).update(points=F('points') + 10)
 
         return Response({'message': f'Word status updated to {new_status}'})
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['get'], permission_classes=[AllowAny])  # Remplacé IsAuthenticated
     def history(self, request, pk=None):
         """Récupère l'historique des changements de statut d'un mot."""
         word = self.get_object()
@@ -164,15 +170,15 @@ class WordViewSet(viewsets.ModelViewSet):
 class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
     queryset = ApprovalWorkflow.objects.all()
     serializer_class = ApprovalWorkflowSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
 
 
 class ContributionViewSet(viewsets.ModelViewSet):
     queryset = Contribution.objects.all()
     serializer_class = ContributionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
 
-    @action(detail=True, methods=['post'], permission_classes=[IsModeratorOrAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])  # Remplacé IsModeratorOrAdmin
     def add_comment(self, request, pk=None):
         contribution = self.get_object()
         comment = request.data.get('comment', '').strip()
@@ -186,7 +192,7 @@ class ContributionViewSet(viewsets.ModelViewSet):
 class PointsSystemViewSet(viewsets.ModelViewSet):
     queryset = PointsSystem.objects.all()
     serializer_class = PointsSystemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]  # Remplacé IsAuthenticated par AllowAny
 
 @csrf_exempt
 def chatbot_query(request):
@@ -219,10 +225,11 @@ def chatbot_query(request):
         return JsonResponse({"word": user_input, "definition": ai_response})
 
     return JsonResponse({"error": "Requête invalide"}, status=400)
+
 User = get_user_model()
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # Déjà configuré avec AllowAny
 def leaderboard(request):
     """Get all users sorted by points, including those with 0 points."""
     users = User.objects.annotate(
