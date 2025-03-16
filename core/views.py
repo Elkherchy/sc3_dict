@@ -181,7 +181,14 @@ class WordViewSet(viewsets.ModelViewSet):
         word = self.get_object()
         history = word.history.all().values('previous_status', 'new_status', 'changed_by__username', 'changed_at', 'comment')
         return Response(list(history))
-
+    @action(detail=True, methods=['post'], permission_classes=[AllowAny])
+    def like(self, request, pk=None):
+        """Incrémente le nombre de likes d'un mot."""
+        word = self.get_object()
+        word.likes = F('likes') + 1
+        word.save()
+        word.refresh_from_db()
+        return Response({'message': 'Like added', 'likes': word.likes})
 
 class ApprovalWorkflowViewSet(viewsets.ModelViewSet):
     queryset = ApprovalWorkflow.objects.all()

@@ -28,7 +28,8 @@ class Word(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     examples = models.TextField(blank=True, null=True) 
-    
+    likes = models.IntegerField(default=0)  
+
     def __str__(self):
         return self.text
 
