@@ -142,35 +142,35 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 class WordViewSet(viewsets.ModelViewSet):
     queryset = Word.objects.all()
     serializer_class = WordSerializer
-    permission_classes = [AllowAny]  
+    permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
         created_by_id = self.request.data.get('created_by')
-        
+
         if created_by_id:
-            # If created_by_id is provided in the request data
             try:
                 user = User.objects.get(id=created_by_id)
                 instance = serializer.save(created_by=user)
-                Contribution.objects.create(user=user, word=instance, action='add')
-                points_obj, _ = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
-                points_obj.points = F('points') + 5
-                points_obj.save()
             except User.DoesNotExist:
-                # Handle case where user doesn't exist
-                instance = serializer.save(created_by=None)
+                return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         elif self.request.user.is_authenticated:
-            # If user is authenticated but no created_by_id provided
             instance = serializer.save(created_by=self.request.user)
-            Contribution.objects.create(user=self.request.user, word=instance, action='add')
-            points_obj, _ = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
-            points_obj.points = F('points') + 5
-            points_obj.save()
+            user = self.request.user
         else:
-            # Anonymous user - don't set created_by
-            instance = serializer.save(created_by=None)
-        
-        # Generate AI variants after saving
+            instance = serializer.save()
+            return
+
+        # ✅ Log the contribution
+        Contribution.objects.create(user=user, word=instance, action='add')
+
+        # ✅ Ensure user has a PointsSystem entry
+        points_entry, created = PointsSystem.objects.get_or_create(user=user, defaults={"points": 0})
+
+        # ✅ Add 5 points for adding a word
+        points_entry.points = F('points') + 5
+        points_entry.save()
+
+        # ✅ Generate AI variants
         ai_variants = generate_variants(instance.text)
         instance.variants = ai_variants
         instance.save()
@@ -192,7 +192,9 @@ class WordViewSet(viewsets.ModelViewSet):
 
         # Award points only if the creator is authenticated
         if word.created_by:
-            PointsSystem.objects.filter(user=word.created_by).update(points=F('points') + 10)
+            points_entry, _ = PointsSystem.objects.get_or_create(user=word.created_by, defaults={"points": 0})
+            points_entry.points = F('points') + 10
+            points_entry.save()
 
         return Response({'message': f'Word status updated to {new_status}'})
     @action(detail=True, methods=['post'])
@@ -305,9 +307,8 @@ User = get_user_model()
 def leaderboard(request):
     """Returns a public leaderboard sorted by points (descending) with correct ranking."""
 
-    # ✅ Ensure users with no points still appear (use Coalesce to replace None with 0)
     users_with_points = User.objects.annotate(
-        total_points=Coalesce(Sum('pointssystem__points'), Value(0))  # ✅ Fix None issue
+        total_points=Coalesce(Sum('pointssystem__points'), Value(0))
     ).order_by('-total_points')
 
     leaderboard_data = []
@@ -315,13 +316,13 @@ def leaderboard(request):
     previous_points = None
 
     for index, user in enumerate(users_with_points):
-        user_points = user.total_points  # ✅ Guaranteed to be at least 0 now
+        user_points = user.total_points
         
         # ✅ Only increase rank if points change
         if previous_points is None or user_points < previous_points:
-            rank = index + 1  # ✅ Rank increases only when points decrease
+            rank = index + 1 
         
-        previous_points = user_points  # ✅ Store points for next loop iteration
+        previous_points = user_points
 
         leaderboard_data.append({
             "rank": rank,
