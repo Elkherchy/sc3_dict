@@ -29,7 +29,7 @@ from django.db.models import Sum , F, Value
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [AllowAny]
     
 class IsModeratorOrAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
