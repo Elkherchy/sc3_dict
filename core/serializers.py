@@ -15,15 +15,14 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 class WordSerializer(serializers.ModelSerializer):
+    created_by = serializers.CharField(source='created_by.username', read_only=True)  # Ajout du username
+
     class Meta:
         model = Word
-        fields = ['id', 'text', 'definition', 'status', 'created_at', 'examples','created_by']
-        read_only_fields = ['status', 'created_at', 'created_by']  # Ensure `created_by` is not required in input
+        fields = ['id', 'text', 'definition', 'status', 'created_at', 'examples', 'created_by']
+        read_only_fields = ['status', 'created_at', 'created_by']  # `created_by` est en lecture seule
 
-    def create(self, validated_data):
-        request = self.context.get('request')  # Get request context
-        if request and request.user.is_authenticated:
-            validated_data['created_by'] = request.user
+    def create(self, validated_data):        
         return super().create(validated_data)
 class ApprovalWorkflowSerializer(serializers.ModelSerializer):
     class Meta:
