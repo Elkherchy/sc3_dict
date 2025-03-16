@@ -338,6 +338,9 @@ def leaderboard(request):
         })
 
     return Response(leaderboard_data)
+
+
+@permission_classes([AllowAny])
 class FileUploadView(APIView):
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [permissions.AllowAny]  # Anyone can upload
