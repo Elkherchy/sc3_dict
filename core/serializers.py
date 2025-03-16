@@ -58,4 +58,4 @@ class PointsSystemSerializer(serializers.ModelSerializer):
 class UploadedDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = UploadedDocument
-        fields = '_all_'
+        fields = ["id", "file", "uploaded_at","uploaded_by","status"]
