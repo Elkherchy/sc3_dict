@@ -134,7 +134,7 @@ class WordViewSet(viewsets.ModelViewSet):
             user = User.objects.get(id=created_by_id)
             serializer.save(created_by=user)
             instance = serializer.save()
-            Contribution.objects.create(user=user, word=instance)
+            Contribution.objects.create(user=user, word=instance, action='add')
             PointsSystem.objects.filter(user=user).update(points=F('points') + 5)
         else:
             instance = serializer.save()
@@ -232,15 +232,30 @@ User = get_user_model()
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Déjà configuré avec AllowAny
 def leaderboard(request):
-    """Get all users sorted by points, including those with 0 points."""
-    users = User.objects.annotate(
-        points=F('pointssystem__points')  # Join with PointsSystem
-    ).order_by('-points')
+    """Returns a public leaderboard sorted by points (descending) with correct ranking."""
 
-    # Format the response
-    leaderboard_data = [
-        {"username": user.username, "points": user.points if user.points is not None else 0}
-        for user in users
-    ]
+    # ✅ Ensure users with no points still appear (use Coalesce to replace None with 0)
+    users_with_points = User.objects.annotate(
+        total_points=Coalesce(Sum('pointssystem__points'), Value(0))  # ✅ Fix None issue
+    ).order_by('-total_points')
+
+    leaderboard_data = []
+    rank = 0
+    previous_points = None
+
+    for index, user in enumerate(users_with_points):
+        user_points = user.total_points  # ✅ Guaranteed to be at least 0 now
+        
+        # ✅ Only increase rank if points change
+        if previous_points is None or user_points < previous_points:
+            rank = index + 1  # ✅ Rank increases only when points decrease
+        
+        previous_points = user_points  # ✅ Store points for next loop iteration
+
+        leaderboard_data.append({
+            "rank": rank,
+            "username": user.username,
+            "points": user_points
+        })
 
     return Response(leaderboard_data)
