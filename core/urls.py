@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import FileUploadViewSet, UserViewSet, WordViewSet,FileUploadView, ApprovalWorkflowViewSet, ContributionViewSet,ModeratorCommentViewSet, PointsSystemViewSet, chatbot_query,view_pdf,LoginView,RegisterUserView, leaderboard
+from .views import FileUploadViewSet, UserViewSet, WordViewSet, ApprovalWorkflowViewSet, ContributionViewSet,ModeratorCommentViewSet, PointsSystemViewSet, chatbot_query,view_pdf,LoginView,RegisterUserView, leaderboard
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
 router.register(r'words', WordViewSet)
