@@ -77,7 +77,7 @@ class LoginView(APIView):
             refresh = RefreshToken.for_user(user)
             access_token = refresh.access_token
 
-            return Response({
+            return JsonResponse({
 
                 'refresh': str(refresh),
                 'access': str(access_token),
@@ -86,7 +86,7 @@ class LoginView(APIView):
                 'role': user.role,
             }, status=status.HTTP_200_OK)
         else:
-            return Response({
+            return JsonResponse({
                 'error': 'Invalid credentials'
                 
             }, status=status.HTTP_401_UNAUTHORIZED)
